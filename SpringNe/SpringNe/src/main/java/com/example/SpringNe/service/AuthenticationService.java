@@ -106,7 +106,7 @@ public class AuthenticationService {
         // JWTClaimsSet: chứa subject, issuer(Người tạo token), issueTime(Time tạo ra Token),
         // expirationTime(Time tồn tại của Token)
         // JWTID : id của token mới tạo
-        // Scope
+        // Scope: định nghĩa ROLE_
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
                 .subject(user.getUsername())
                 .issuer("khangluctran.com")  // xác định token được issuer từ ai: Khangluctran
