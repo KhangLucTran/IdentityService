@@ -79,4 +79,21 @@ public class UserControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("code").value(1000))
                 .andExpect(MockMvcResultMatchers.jsonPath("result.id").value("cd684f61-20a8-47dd-ac90-a5dbe27c293f"));
     }
+
+    @Test
+    void createUser_usernameInvalid_fail() throws Exception {
+        //GIVEN
+        request.setUsername("Ka");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        String content = objectMapper.writeValueAsString(request);
+        //WHEN, THEN
+        mockMvc.perform(MockMvcRequestBuilders
+                        .post("/khangluc/users")
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(content))
+                .andExpect(status().isBadRequest())
+                .andExpect(MockMvcResultMatchers.jsonPath("code").value(1003))
+                .andExpect(MockMvcResultMatchers.jsonPath("message").value("Username must be at least 3 characters!"));
+    }
 }

@@ -1,29 +1,29 @@
 package com.example.SpringNe.service;
 
+import com.example.SpringNe.constant.PredefinedRole;
+import com.example.SpringNe.dto.request.RoleRequest;
 import com.example.SpringNe.dto.request.UserCreationRequest;
 import com.example.SpringNe.dto.request.UserUpdateRequest;
+import com.example.SpringNe.dto.response.RoleResponse;
 import com.example.SpringNe.dto.response.UserResponse;
+import com.example.SpringNe.entity.Role;
 import com.example.SpringNe.entity.User;
-import com.example.SpringNe.enums.Role;
 import com.example.SpringNe.exception.AppException;
 import com.example.SpringNe.exception.ErrorCode;
-import com.example.SpringNe.mapper.UserMapper;
+import com.example.SpringNe.mapper.RoleMapper;
 import com.example.SpringNe.repository.RoleRepository;
 import com.example.SpringNe.repository.UserRepository;
-import lombok.AccessLevel;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -39,36 +39,45 @@ public class UserService {
     @Autowired
     private RoleRepository roleRepository;
 
+    @Autowired
+    private RoleMapper roleMapper;
 
-
+    @Transactional
     public UserResponse createUser(UserCreationRequest request) {
         log.info("Service: Create User");
-        User user = new User();
-        if (userRepository.existsByUsername(request.getUsername()))
+
+        // Check if the username already exists
+        if (userRepository.existsByUsername(request.getUsername())) {
             throw new AppException(ErrorCode.USER_EXISTED);
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setDob(request.getDob());
+        }
 
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        // Create a new User entity
+        HashSet<Role> roles = new HashSet<>();
+        roleRepository.findById(PredefinedRole.USER_ROLE).ifPresent(roles::add);
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .dob(request.getDob())
+                .roles(roles)
+                .build();
+        // Save the user to the repository
+        user = userRepository.save(user);
 
-        HashSet<String> roles = new HashSet<>();
-        roles.add(Role.USER.name());
-        //user.setRoles(roles);
+        HashSet<RoleResponse> roleResponses = roles.stream()
+                .map(roleMapper::toRoleResponse)
+                .collect(Collectors.toCollection(HashSet::new));
 
-        userRepository.save(user);
-
-        UserResponse userResponse = new UserResponse();
-        userResponse.setId(user.getId());
-        userResponse.setUsername(user.getUsername());
-        userResponse.setFirstName(user.getFirstName());
-        userResponse.setLastName(user.getLastName());
-        userResponse.setDob(user.getDob());
-        //userResponse.setRoles(user.getRoles());
-
-        return userResponse;
+        // Create the UserResponse object
+        return UserResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .dob(user.getDob())
+                .roles(roleResponses)
+                .build();
     }
 
     // Cách Authorize bằng EnableMethodSecurity
